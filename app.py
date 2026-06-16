@@ -9,9 +9,110 @@ from ta.volatility import BollingerBands
 
 def screen_stock(symbol):
 
-    return {
+    try:
+
+        df = yf.download(
+            symbol,
+            period="1y",
+            progress=False
+        )
+
+        if hasattr(df.columns, "levels"):
+            df.columns = df.columns.get_level_values(0)
+
+        close = df["Close"]
+
+        dma50 = SMAIndicator(
+            close,
+            window=50
+        ).sma_indicator()
+
+        dma200 = SMAIndicator(
+            close,
+            window=200
+        ).sma_indicator()
+
+        rsi = RSIIndicator(
+            close,
+            window=14
+        ).rsi()
+
+        bb = BollingerBands(
+            close,
+            window=20,
+            window_dev=2
+        )
+
+        upper_band = bb.bollinger_hband()
+
+        latest_price = float(
+            close.iloc[-1]
+        )
+
+        latest_dma50 = float(
+            dma50.iloc[-1]
+        )
+
+        latest_dma200 = float(
+            dma200.iloc[-1]
+        )
+
+        latest_rsi = float(
+            rsi.iloc[-1]
+        )
+
+        avg_volume = (
+            df["Volume"]
+            .tail(20)
+            .mean()
+        )
+
+        latest_volume = float(
+            df["Volume"].iloc[-1]
+        )
+
+        trend_condition = (
+            latest_price > latest_dma50 > latest_dma200
+        )
+
+        rsi_condition = (
+            55 <= latest_rsi <= 70
+        )
+
+        volume_condition = (
+            latest_volume > (1.5 * avg_volume)
+        )
+
+        breakout_condition = (
+            latest_price > float(
+                upper_band.iloc[-1]
+            )
+        )
+
+        buy_signal = (
+            trend_condition
+            and rsi_condition
+            and volume_condition
+            and breakout_condition
+        )
+        return {
+    "Stock": symbol,
+    "Price": round(latest_price, 2),
+    "DMA50": round(latest_dma50, 2),
+    "DMA200": round(latest_dma200, 2),
+    "RSI": round(latest_rsi, 2),
+    "Trend": trend_condition,
+    "Breakout": breakout_condition,
+    "Volume Spike": volume_condition,
+    "BUY": buy_signal
+}
+
+    except Exception:
+        return {
         "Stock": symbol,
         "Price": 0,
+        "DMA50": 0,
+        "DMA200": 0,
         "RSI": 0,
         "Trend": False,
         "Breakout": False,
@@ -333,17 +434,25 @@ for entry in feed.entries[:5]:
 
 st.subheader("Stock Screener")
 
-large_caps = [
-"RELIANCE.NS",
-"TCS.NS",
-"INFY.NS",
-"HDFCBANK.NS",
-"ICICIBANK.NS"
+stocks_to_screen = [
+    # Large Caps
+    "RELIANCE.NS",
+    "TCS.NS",
+    "INFY.NS",
+    "HDFCBANK.NS",
+    "ICICIBANK.NS",
+
+    # Mid Caps
+    "POLYCAB.NS",
+    "COFORGE.NS",
+    "PERSISTENT.NS",
+    "MUTHOOTFIN.NS",
+    "APLAPOLLO.NS"
 ]
 
 results = []
 
-for stock_name in large_caps:
+for stock_name in stocks_to_screen:
   results.append(
      screen_stock(stock_name)
 )
@@ -351,12 +460,26 @@ for stock_name in large_caps:
 screen_df = pd.DataFrame(results)
 
 st.dataframe(screen_df)
+buy_count = screen_df["BUY"].sum()
+
+st.metric(
+    "Qualified Stocks",
+    buy_count
+)
 
 qualified = screen_df[
 screen_df["BUY"] == True
 ]
+if buy_count > 0:
+    st.success(
+        f"{buy_count} stocks match the Momentum Breakout Strategy."
+    )
+else:
+    st.warning(
+        "No stocks currently match the Momentum Breakout Strategy."
+    )
 
-st.subheader("✅ Qualified Stocks")
+st.subheader("📈 Momentum Breakout Screener")
 
 if len(qualified) > 0:
   st.dataframe(qualified)
