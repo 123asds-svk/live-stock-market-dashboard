@@ -86,6 +86,19 @@ python -m streamlit run app.py
 * Real-time alerts
 * Cloud database integration
 * AI-based stock insights
+## Live Demo
+
+https://live-stock-market-dashboard-ipdmdno9ybiue7meubwmah.streamlit.app/
+
+## Features
+
+- Real-Time Stock Analysis
+- Technical Indicators
+- Momentum Breakout Screener
+- Candlestick Charts
+- Multi-Stock Comparison
+- Watchlist Tracking
+- Market News Integration
 
 ## Author
 
